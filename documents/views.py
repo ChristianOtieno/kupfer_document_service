@@ -13,19 +13,27 @@ from django.http import HttpResponseNotFound
 from drf_yasg import openapi
 from drf_yasg.utils import swagger_auto_schema
 
-DOCUMENT_AUTO_SCHEMA = swagger_auto_schema(
+
+def document_auto_schema(operation_description):
+    return swagger_auto_schema(
         auto_schema=DocumentSwaggerAutoSchema,
         parser_classes=(MultiPartParser,),
-)
+        operation_description=operation_description,
+    )
 
 
-@method_decorator(name='create', decorator=DOCUMENT_AUTO_SCHEMA)
-@method_decorator(name='update', decorator=DOCUMENT_AUTO_SCHEMA)
-@method_decorator(name='partial_update', decorator=DOCUMENT_AUTO_SCHEMA)
+@method_decorator(name='create', decorator=document_auto_schema(operation_description=
+                  'Creates a new document.'))
+@method_decorator(name='update', decorator=document_auto_schema(operation_description=
+                  'Updates the document with the given ID (all fields).'))
+@method_decorator(name='partial_update', decorator=document_auto_schema(operation_description=
+                  'Updates the document with the given ID (only specified fields).'))
+@method_decorator(name='destroy', decorator=swagger_auto_schema(operation_description=
+                  'Deletes the document with the given ID.'))
+@method_decorator(name='retrieve', decorator=swagger_auto_schema(operation_description=
+                  'Retrieves a documents with the given ID.'))
 class DocumentViewSet(viewsets.ModelViewSet):
-    """
-    Documents.
-    """
+
     def update(self, request, *args, **kwargs):
         kwargs['partial'] = True
         return super(DocumentViewSet, self).update(request, *args, **kwargs)
@@ -40,6 +48,7 @@ class DocumentViewSet(viewsets.ModelViewSet):
     @swagger_auto_schema(manual_parameters=[workflowlevel1_uuid,
                                             workflowlevel2_uuid, ])
     def list(self, request, *args, **kwargs):
+        """Retrieves a list of documents."""
         # Use this queryset or the django-filters lib will not work
         queryset = self.filter_queryset(self.get_queryset())
 
