@@ -1,7 +1,7 @@
 ---
 pipeline:
   test:
-    image: python:3.6
+    image: python:${PYTHON_VERSION}
     commands:
       - bash scripts/tcp-port-wait.sh postgres 5432
       - bash scripts/run-tests.sh --ci
@@ -20,7 +20,7 @@ pipeline:
       - SECRET_KEY=nothing
 
   bandit:
-    image: python:3.6
+    image: python:${PYTHON_VERSION}
     commands:
       - pip install bandit
       - bandit -x tests/ -r -lll .
@@ -29,20 +29,16 @@ pipeline:
 
   build-docker-image-tag:
     image: plugins/docker
-    registry:
-      from_secret: DOCKER_REGISTRY
-    repo:
-      from_secret: DOCKER_REPO
-    username:
-      from_secret: DOCKER_USERNAME
-    password:
-      from_secret: DOCKER_PASSWORD
-    auto_tag: true
     insecure: true
+    registry: registry.tola.io
+    repo: registry.tola.io/humanitec-walhall/documents_service
     file: Dockerfile
+    auto_tag: true
+    secrets: [DOCKER_USERNAME, DOCKER_PASSWORD]
     when:
-      event: [tag]
-      status: [success]
+      event: [push, tag]
+      branch: [master]
+      status: [ success ]
 
   deploy-docs:
     image: python:3.6
@@ -59,16 +55,16 @@ pipeline:
       - ssh-add -k /root/.ssh/id_rsa
       - git config --global user.email "engine@humanitec.com"
       - git config --global user.name "HumanitecBot"
-      - git clone git@github.com:Humanitec/docs-site.git
-      - mkdir -p docs-site/hugo/content/marketplace/documents-module/documents-service/
+      - git clone git@github.com:kupfer-software/kupfer_document_service.git
+      - mkdir -p docs-site/hugo/content/marketplace/products-module/documents-service/
       - mkdir -p docs-site/api/marketplace/documents-service/
-      - cd docs-site/hugo/content/marketplace/documents-module/documents-service/
+      - cd docs-site/hugo/content/marketplace/products-module/documents-service/
       - cp ../../../../../../README.md _index.md -r
       - cd ../../../../../api/marketplace/documents-service
       - cp ../../../../swagger.json swagger.json -r
       - cd ../../../
       - git add .
-      - git diff-index --quiet HEAD || git commit -m "Updated documentation for Documents service"
+      - git diff-index --quiet HEAD || git commit -m "Updated documentation for Products service"
       - git push origin master
     secrets: [NPM_USER, NPM_EMAIL, SSH_KEY, SSH_PUBLIC_KEY]
     when:
@@ -101,3 +97,7 @@ services:
       - POSTGRES_DB=documents_service
       - POSTGRES_USER=root
       - POSTGRES_PASSWORD=root
+
+matrix:
+  PYTHON_VERSION:
+    - 3.6
